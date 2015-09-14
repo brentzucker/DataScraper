@@ -1,15 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# http://pygoogle.googlecode.com/svn/trunk/ get pygoogle.py and setup.py
-# python setup.py build
-# sudo python setup.py install
-
 # easy_install pip
 # pip install requests
 # pip install BeautifulSoup4
 
-from pygoogle import pygoogle
 import requests, time
 from bs4 import BeautifulSoup
 
@@ -18,26 +13,10 @@ top_ten_thousand = 10
 top_million = 1000
 num_of_sites = top_thousand
 
-def getGoogleSearchResult(domain):
-	# Empty string returned if not found
-	wikiArticle_name = '' 
-
-	# Search google for website's wikipedia page
-	g = pygoogle('wikipedia: {0}'.format(domain))
-	g.pages = 1
-
-	# If there are results store the first results url
-	if len(g.get_urls()) > 0:
-		first_result = g.get_urls()[0]
-
-		# Get the name of the Wikipedia Article by removing the preceding url
-		wikiArticle_name = first_result[len('https://en.wikipedia.org/wiki/'):]
-	return wikiArticle_name
-
 # Returns information scraped from Wikipedia Article
 def scrapeWikipedia(wikiArticle_name):
 	# Empty String returned if not found
-	industries = ''
+	industries = typeOfSite = owner = ''
 	wiki_url = 'https://en.wikipedia.org/wiki/'
 
 	if wikiArticle_name != '':
@@ -45,18 +24,35 @@ def scrapeWikipedia(wikiArticle_name):
 		page_html = requests.get(scrape_url).text
 		soup = BeautifulSoup(page_html, 'html.parser')
 
-		soup.find_all("table", class_="infobox")
-		infobox = soup.find_all("table", class_="infobox")[0]
+		# If the infobox exists
+		if len(soup.find_all("table", class_="infobox")) > 0:
+			infobox = soup.find_all("table", class_="infobox")[0]
 
-		for th in infobox(text='Industry'):
-			# A list of industries or 1 industry
-			if th.parent.find_next_sibling("td").string == None:
-				for link in th.parent.find_next_sibling("td").find_all('a'):
-					industries += link.string + ' - '
-				industries = industries[:-3]
-			else:
-				industries = th.parent.find_next_sibling("td").string
-	return industries
+			for th in infobox(text='Industry'):
+				# A list of industries or 1 industry
+				if th.parent.find_next_sibling("td").string == None:
+					# for link in th.parent.find_next_sibling("td").find_all('a'):
+					industry_list = []
+					for text in th.parent.find_next_sibling("td")(text=''):
+						if text.string != None:
+							industry_list.append(text.string)
+					for industry in set(industry_list):
+						industries += industry.string + ' - '
+					industries = industries[:-3]
+				else:
+					industries = th.parent.find_next_sibling("td").string
+
+			for text in infobox(text='Type of site'):		
+				if hasattr(text.parent.parent.find_next_sibling("td"), 'string') and text.parent.parent.find_next_sibling("td").string != None:
+					typeOfSite = text.parent.parent.find_next_sibling("td").string
+
+			for text in infobox(text='Owner'):
+				if text.parent.find_next_sibling("td").string != None:
+					owner = text.parent.find_next_sibling("td").string
+				elif len(text.parent.find_next_sibling("td")(text='')) > 0:
+					owner = text.parent.find_next_sibling("td")(text='')[0].string
+
+	return industries.encode('utf-8'), typeOfSite.encode('utf-8'), owner.encode('utf-8')
 
 def getWebsiteInfo(website):
 	url2 = 'http://stuffgate.com/{0}'.format(website)
@@ -86,7 +82,7 @@ if __name__ == '__main__':
 	date_time = time.strftime("%Y-%m-%d_%H-%M-%S")
 	filename = 'Top-{0}000-Websites-{1}.csv'.format(num_of_sites, date_time)
 	csv_file = open(filename, 'w')
-	csv_file.write('Rank, Website, Industry, Google Pagerank, Advertisement Revenue, Estimated Value, Created, Expires\n')
+	csv_file.write('Rank, Website, Industry, Type Of Site, Owner, Google Pagerank, Advertisement Revenue, Estimated Value, Created, Expires\n')
 	csv_file.close()
 
 	# Scrape the Ranks of the Top Websites
@@ -108,13 +104,12 @@ if __name__ == '__main__':
 			website = cells[3]
 
 			# Get info from Wikipedia for the current website
-			wikiArticle_name = getGoogleSearchResult(website)
-			industries = scrapeWikipedia(wikiArticle_name)
+			industries, typeOfSite, owner = scrapeWikipedia(website)
 
 			# Get the info from stuffgate for the current website
 			google_pr, revenue, value, created, expires = getWebsiteInfo(website)
 
-			w = {"rank": cells[1], "website": cells[3], "industry": industries, "google_pr": google_pr, "revenue": revenue, "value": value, "created": created, "expires": expires}
+			w = {"rank": cells[1], "website": cells[3], "industry": industries, "typeOfSite": typeOfSite, "owner": owner, "google_pr": google_pr, "revenue": revenue, "value": value, "created": created, "expires": expires}
 
 			# Log what Websites have been appended
 			print w
@@ -124,10 +119,5 @@ if __name__ == '__main__':
 
 			# Write to CSV file
 			csv_file = open(filename, 'a')
-			csv_file.write('{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}\n'.format(w['rank'], w['website'], w['industry'], w['google_pr'], w['revenue'], w['value'], w['created'], w['expires']))
+			csv_file.write('{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8} {9}\n'.format(w['rank'], w['website'], w['industry'], w['typeOfSite'], w['owner'], w['google_pr'], w['revenue'], w['value'], w['created'], w['expires']))
 			csv_file.close()
-		
-		# # Print in CSV format
-		# for w in websites:
-		# 	csv_file.write('{0}, {1}, {2}, {3}, {4}, {5}'.format(w['rank'], w['website'], w['revenue'], w['value'], w['created'], w['expires']))
-		# csv_file.close()

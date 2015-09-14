@@ -1,7 +1,11 @@
 #Stage 1
 Generate list of the top 1000 sites and scrape stuffgate for information. (Estimated Values, Significant Dates)
-- avg performance time: 7.5 min
+- avg performance time per 1000: 7.5 min
 
 #Stage 2
 Perform stage 1 along with scraping wikipedia for information. Could scrape wikipedia for all information 1 time and then just look up that info in a spreadsheet to save performance time.
 - avg performance time: 
+
+#Stage 3
+Switching to just searching wikipedia for the article name because of google api's search limits
+- avg performance time per 1000: 20 min
