@@ -16,7 +16,7 @@ num_of_sites = top_thousand
 # Returns information scraped from Wikipedia Article
 def scrapeWikipedia(wikiArticle_name):
 	# Empty String returned if not found
-	industries = typeOfSite = owner = ''
+	employees = industries = typeOfSite = owner = ''
 	wiki_url = 'https://en.wikipedia.org/wiki/'
 
 	if wikiArticle_name != '':
@@ -27,6 +27,11 @@ def scrapeWikipedia(wikiArticle_name):
 		# If the infobox exists
 		if len(soup.find_all("table", class_="infobox")) > 0:
 			infobox = soup.find_all("table", class_="infobox")[0]
+
+			for text in infobox(text='Employees'):
+				for child in text.parent.find_next_sibling("td").children:
+					if child.string != None:
+						employees = child.string.replace(',', '').replace('\n', '')
 
 			for th in infobox(text='Industry'):
 				# A list of industries or 1 industry
@@ -45,6 +50,8 @@ def scrapeWikipedia(wikiArticle_name):
 			for text in infobox(text='Type of site'):		
 				if hasattr(text.parent.parent.find_next_sibling("td"), 'string') and text.parent.parent.find_next_sibling("td").string != None:
 					typeOfSite = text.parent.parent.find_next_sibling("td").string
+				elif hasattr(text.parent.find_next_sibling("td"), 'string') and text.parent.find_next_sibling("td").string != None:
+					typeOfSite = text.parent.find_next_sibling("td").string
 
 			for text in infobox(text='Owner'):
 				if text.parent.find_next_sibling("td").string != None:
@@ -52,7 +59,7 @@ def scrapeWikipedia(wikiArticle_name):
 				elif len(text.parent.find_next_sibling("td")(text='')) > 0:
 					owner = text.parent.find_next_sibling("td")(text='')[0].string
 
-	return industries.encode('utf-8'), typeOfSite.encode('utf-8'), owner.encode('utf-8')
+	return employees, industries, typeOfSite, owner.encode('utf-8')
 
 def getWebsiteInfo(website):
 	url2 = 'http://stuffgate.com/{0}'.format(website)
@@ -82,7 +89,7 @@ if __name__ == '__main__':
 	date_time = time.strftime("%Y-%m-%d_%H-%M-%S")
 	filename = 'Top-{0}000-Websites-{1}.csv'.format(num_of_sites, date_time)
 	csv_file = open(filename, 'w')
-	csv_file.write('Rank, Website, Industry, Type Of Site, Owner, Google Pagerank, Advertisement Revenue, Estimated Value, Created, Expires\n')
+	csv_file.write('Rank, Website, Employees, Industry, Type Of Site, Owner, Google Pagerank, Advertisement Revenue, Estimated Value, Created, Expires\n')
 	csv_file.close()
 
 	# Scrape the Ranks of the Top Websites
@@ -104,12 +111,12 @@ if __name__ == '__main__':
 			website = cells[3]
 
 			# Get info from Wikipedia for the current website
-			industries, typeOfSite, owner = scrapeWikipedia(website)
+			employees, industries, typeOfSite, owner = scrapeWikipedia(website)
 
 			# Get the info from stuffgate for the current website
 			google_pr, revenue, value, created, expires = getWebsiteInfo(website)
 
-			w = {"rank": cells[1], "website": cells[3], "industry": industries, "typeOfSite": typeOfSite, "owner": owner, "google_pr": google_pr, "revenue": revenue, "value": value, "created": created, "expires": expires}
+			w = {"rank": cells[1], "website": cells[3], "employees": employees, "industry": industries, "typeOfSite": typeOfSite, "owner": owner, "google_pr": google_pr, "revenue": revenue, "value": value, "created": created, "expires": expires}
 
 			# Log what Websites have been appended
 			print w
@@ -119,5 +126,5 @@ if __name__ == '__main__':
 
 			# Write to CSV file
 			csv_file = open(filename, 'a')
-			csv_file.write('{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8} {9}\n'.format(w['rank'], w['website'], w['industry'], w['typeOfSite'], w['owner'], w['google_pr'], w['revenue'], w['value'], w['created'], w['expires']))
+			csv_file.write('{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8} {9} {10}\n'.format(w['rank'], w['website'], w['employees'], w['industry'], w['typeOfSite'], w['owner'], w['google_pr'], w['revenue'], w['value'], w['created'], w['expires']))
 			csv_file.close()
